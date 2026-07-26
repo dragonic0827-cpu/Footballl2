@@ -6,6 +6,7 @@ from index import app
 
 
 def test_vercel_entrypoint_exists_and_exports_wsgi_app() -> None:
+    assert Path("index.py").is_file()
     config = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
     entrypoint = Path(config["tool"]["vercel"]["entrypoint"])
     assert entrypoint == Path("index.py")
@@ -16,6 +17,13 @@ def test_vercel_routes_every_request_to_python_entrypoint() -> None:
     config = json.loads(Path("vercel.json").read_text(encoding="utf-8"))
     assert config["builds"] == [{"src": "index.py", "use": "@vercel/python"}]
     assert config["routes"] == [{"src": "/(.*)", "dest": "/index.py"}]
+
+
+def test_no_python_project_config_can_break_vercel_parser() -> None:
+    # This dependency-free app needs no package build metadata. Keeping pytest's
+    # settings in pytest.ini prevents a damaged pyproject merge from blocking
+    # Vercel before it can build the explicitly configured Python function.
+    assert not Path("pyproject.toml").exists()
 
 
 def request(path: str) -> tuple[str, dict[str, str], bytes]:
