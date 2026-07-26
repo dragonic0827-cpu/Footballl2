@@ -25,12 +25,14 @@ python -m pytest
 
 패키지는 `src/football_world` 아래에서 UI와 독립적으로 동작한다. `build_early_world(seed)`로 고정 시드 세계를 만들고 `WorldEngine.advance_to(...)`로 사건을 시간순 처리한다.
 
+codex-nl7fwq
 Vercel 배포는 `pyproject.toml`의 `tool.vercel.entrypoint`가 지정한 `api/index.py` WSGI 앱을 사용한다. 루트 경로에는 한국어 상태 화면이, `/api/health`에는 초기 세계를 실제로 생성해 확인한 JSON 상태가 반환된다. 로컬에서는 다음과 같이 실행할 수 있다.
 
 ```bash
 python api/index.py
 ```
 
+main
 ## 다음 단계
 
 가장 먼저 NOC·올림픽 엔트리·선수단·선수 등록 개체와 `EligibilityValidator`/시대별 이동 검증기를 추가한 뒤, 검증된 1908년 올림픽 규칙 데이터로 첫 실제 회차를 구성해야 한다. 이후에만 경기 생성 범위를 확대한다.

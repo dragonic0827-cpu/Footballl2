@@ -4,9 +4,15 @@ version = "0.1.0"
 description = "Deterministic, continuous international football history simulation core"
 requires-python = ">=3.11"
 
+codex-nl7fwq
 [tool.vercel]
 entrypoint = "api/index.py"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+main
