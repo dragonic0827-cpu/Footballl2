@@ -4,7 +4,6 @@ version = "0.1.0"
 description = "Deterministic, continuous international football history simulation core"
 requires-python = ">=3.11"
 
-codex-7c7q3r
 [tool.vercel]
 # This path is relative to Vercel's configured Root Directory. The Root
 # Directory must therefore be the repository root, not `src` or `tests`.
