@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import tempfile
 from dataclasses import asdict
 from datetime import date
 from pathlib import Path
@@ -11,6 +12,18 @@ from .model import (Association, AuditEntry, CompetitionEdition, NationalTeam,
 
 def save_world(state: WorldState, path: Path) -> None:
     path.write_text(json.dumps(asdict(state), ensure_ascii=False, sort_keys=True, default=str), encoding="utf-8")
+
+
+def dumps_world(state: WorldState) -> str:
+    """Serialize through the same versioned codec used by file saves."""
+    return json.dumps(asdict(state), ensure_ascii=False, sort_keys=True, default=str)
+
+
+def loads_world(payload: str) -> WorldState:
+    with tempfile.NamedTemporaryFile("w+", encoding="utf-8") as handle:
+        handle.write(payload)
+        handle.flush()
+        return load_world(Path(handle.name))
 
 
 def load_world(path: Path) -> WorldState:
@@ -29,4 +42,3 @@ def load_world(path: Path) -> WorldState:
     state.audit_log = [AuditEntry(**{**item, "when": date.fromisoformat(item["when"])}) for item in raw["audit_log"]]
     state.deferred_effects = raw["deferred_effects"]
     return state
-

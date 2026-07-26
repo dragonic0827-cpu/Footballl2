@@ -25,11 +25,9 @@ python -m pytest
 
 패키지는 `src/football_world` 아래에서 UI와 독립적으로 동작한다. `build_early_world(seed)`로 고정 시드 세계를 만들고 `WorldEngine.advance_to(...)`로 사건을 시간순 처리한다.
 
-codex-h8taee
 Vercel 프로젝트의 **Root Directory는 비워 두거나 저장소 루트(`Footballl2`)로 설정해야 한다. `src` 또는 `tests`로 설정하면 안 된다.** `vercel.json`, `index.py`, `api`와 `src`는 모두 저장소 루트를 기준으로 탐색되기 때문이다. `vercel.json`은 모든 URL을 루트 `index.py` Python Function으로 전달하고, `index.py`는 HTTP 구현이 있는 `api/index.py`의 WSGI 앱을 내보낸다. 루트 경로에는 한국어 상태 화면이, `/api/health`에는 초기 세계를 실제로 생성해 확인한 JSON 상태가 반환된다.
 
 이 프로젝트는 런타임 외부 의존성이 없으므로 Vercel 빌드에 `pyproject.toml`이 필요하지 않다. 배포를 막았던 손상된 TOML 병합 내용(`codex-…`, 중복 섹션, `main`)을 원천적으로 제거하기 위해 pytest 설정은 `pytest.ini`로 분리했다.
-Vercel 프로젝트의 **Root Directory는 비워 두거나 저장소 루트(`Footballl2`)로 설정해야 한다. `src` 또는 `tests`로 설정하면 안 된다.** `pyproject.toml`, `vercel.json`, `index.py`는 모두 저장소 루트를 기준으로 탐색되기 때문이다. `vercel.json`은 모든 URL을 루트 `index.py` Python Function으로 전달하고, `index.py`는 HTTP 구현이 있는 `api/index.py`의 WSGI 앱을 내보낸다. 루트 경로에는 한국어 상태 화면이, `/api/health`에는 초기 세계를 실제로 생성해 확인한 JSON 상태가 반환된다.
 
 Vercel 설정:
 
@@ -43,6 +41,17 @@ Vercel 설정:
 ```bash
 python api/index.py
 ```
+
+브라우저에서 `http://127.0.0.1:8000`을 열면 대시보드, 대표팀, 대회, 경기, 연대기, 감사, 설정 화면을 사용할 수 있다. 기본 세계는 **실제 역사 데이터가 아니라** 1934년 이집트 우승과 1938년 디펜딩 챔피언 승계를 재생하기 위한 2개 팀 개발 fixture다.
+
+## 배포 저장소
+
+서버는 저장 인터페이스 뒤에서 다음 백엔드를 선택한다.
+
+- `KV_REST_API_URL` + `KV_REST_API_TOKEN`, 또는 `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`: Redis REST 영구 저장
+- 환경변수가 없을 때: `/tmp/football-world` 로컬 파일 fallback
+
+Vercel에서 `/tmp` fallback은 인스턴스 교체 시 사라질 수 있으며 UI에 `임시 로컬 저장소`라고 표시된다. 실제 배포 플레이에는 위 Redis REST 환경변수 한 쌍을 반드시 설정해야 한다. 모든 변경 API는 현재 세계를 즉시 저장하고, `저장`은 별도의 `manual-save` 슬롯을 만들며, `불러오기`는 그 슬롯을 현재 세계로 복원한다.
 
 ## 다음 단계
 

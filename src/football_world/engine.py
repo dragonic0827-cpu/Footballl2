@@ -35,11 +35,22 @@ class WorldEngine:
     def _handle(self, event: ScheduledEvent) -> None:
         if event.kind == "MATCH":
             self.play_match(**event.payload)
+        elif event.kind == "FINALIZE_PARTICIPANTS":
+            self.finalize_participants(str(event.payload["edition_id"]))
+            self._audit_event(event, "PARTICIPANTS_FINALIZED")
+        elif event.kind == "CROWN_CHAMPION":
+            self.crown_champion(str(event.payload["edition_id"]), str(event.payload["team_id"]))
+        elif event.kind == "PREPARE_SUCCESSOR":
+            self.prepare_successor_edition(str(event.payload["previous_id"]), str(event.payload["next_id"]))
+            self._audit_event(event, "SUCCESSOR_PREPARED")
         elif event.kind == "APPLY_EFFECT":
             team = self.state.teams[str(event.payload["team_id"])]
             setattr(team, str(event.payload["field"]), getattr(team, str(event.payload["field"])) + float(event.payload["amount"]))
         else:
             raise ConsistencyViolation("UNKNOWN_EVENT", event.when, "EVENT", [], ["known event type"], event.kind, "timeline stopped", ["remove or implement event"])
+
+    def _audit_event(self, event: ScheduledEvent, reason: str) -> None:
+        self.state.audit_log.append(AuditEntry(event.when, event.kind, [str(value) for value in event.payload.values()], reason, "scheduled vertical-slice event"))
 
     def validate_team(self, team_id: str, on: date) -> None:
         team = self.state.teams[team_id]
@@ -80,13 +91,15 @@ class WorldEngine:
         edition = self.state.editions[edition_id]
         self.freeze_and_validate_edition(edition_id)
         a, b = self.state.teams[home_id], self.state.teams[away_id]
+        before_a, before_b = a.rating, b.rating
         expectation = 1 / (1 + 10 ** ((b.rating - a.rating) / 400))
         winner = forced_winner or (home_id if self.rng.random(f"match:{edition_id}:{home_id}:{away_id}") < expectation else away_id)
         actual = 1.0 if winner == home_id else 0.0
         delta = 24 * (actual - expectation)
         a.rating += delta; b.rating -= delta
-        result = {"date": on.isoformat(), "edition_id": edition_id, "home": home_id, "away": away_id, "winner": winner, "rating_delta": {home_id: delta, away_id: -delta}}
+        result = {"date": on.isoformat(), "edition_id": edition_id, "home": home_id, "away": away_id, "neutral": True, "winner": winner, "pre_rating": {home_id: before_a, away_id: before_b}, "modifiers": {home_id: 0, away_id: 0}, "expected": {home_id: expectation, away_id: 1 - expectation}, "rating_delta": {home_id: delta, away_id: -delta}, "post_rating": {home_id: a.rating, away_id: b.rating}, "rng_domain": f"match:{edition_id}:{home_id}:{away_id}", "basis": "forced regression scenario" if forced_winner else "deterministic rating expectation draw"}
         self.state.matches.append(result)
+        self.state.audit_log.append(AuditEntry(on, "MATCH", [edition_id, home_id, away_id], "MATCH_PLAYED", str(result["basis"])))
         return result
 
     def crown_champion(self, edition_id: str, team_id: str) -> None:
@@ -126,4 +139,17 @@ def build_early_world(seed: int = 1908) -> WorldState:
     state.editions["WC1934"] = CompetitionEdition("WC1934", "WORLD_CUP", 1934, date(1934, 5, 27), 2, date(1934, 1, 1), {"format": "KNOCKOUT", "defending_champion_auto_qualifies": False}, [source], qualifiers={"EGY": "QUALIFIER", "ITA": "HOST_AUTO"})
     source38 = RuleMetadata("WC-1938-BASE", "1938 World Championship continuity rules", "FIFA", date(1937, 1, 1), "project verified fixture", "USER_DEFINED")
     state.editions["WC1938"] = CompetitionEdition("WC1938", "WORLD_CUP", 1938, date(1938, 6, 4), 2, date(1937, 12, 1), {"format": "KNOCKOUT", "defending_champion_auto_qualifies": True}, [source38], qualifiers={"ITA": "QUALIFIER"})
+    return state
+
+
+def build_playable_world(seed: int = 1908, egypt_wins: bool = True) -> WorldState:
+    """Explicit development fixture that demonstrates cross-edition memory."""
+    state = build_early_world(seed)
+    state.current_date = date(1934, 1, 1)
+    engine = WorldEngine(state)
+    engine.schedule(date(1934, 5, 1), 10, "FINALIZE_PARTICIPANTS", edition_id="WC1934")
+    engine.schedule(date(1934, 5, 27), 10, "MATCH", home_id="EGY", away_id="ITA", edition_id="WC1934", forced_winner="EGY" if egypt_wins else None)
+    engine.schedule(date(1934, 5, 28), 10, "CROWN_CHAMPION", edition_id="WC1934", team_id="EGY")
+    engine.schedule(date(1937, 12, 2), 10, "PREPARE_SUCCESSOR", previous_id="WC1934", next_id="WC1938")
+    engine.schedule(date(1938, 1, 2), 10, "FINALIZE_PARTICIPANTS", edition_id="WC1938")
     return state
