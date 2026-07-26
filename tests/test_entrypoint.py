@@ -1,4 +1,5 @@
 import json
+import tomllib
 from pathlib import Path
 
 from index import app
@@ -6,6 +7,10 @@ from index import app
 
 def test_vercel_entrypoint_exists_and_exports_wsgi_app() -> None:
     assert Path("index.py").is_file()
+    config = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+    entrypoint = Path(config["tool"]["vercel"]["entrypoint"])
+    assert entrypoint == Path("index.py")
+    assert entrypoint.is_file()
 
 
 def test_vercel_routes_every_request_to_python_entrypoint() -> None:
