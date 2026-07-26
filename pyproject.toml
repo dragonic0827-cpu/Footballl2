@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Deterministic, continuous international football history simulation core"
 requires-python = ">=3.11"
 
+codex-hiueb4
 [tool.vercel]
 # Keep this at the repository root.  Vercel's framework detector checks the
 # conventional root entrypoints before it constructs the Python function.
@@ -12,3 +13,8 @@ entrypoint = "app.py"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+main
